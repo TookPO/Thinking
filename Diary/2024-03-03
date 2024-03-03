@@ -1,0 +1,58 @@
+윤성우의 열혈C 프로그래밍에서 binary데이터를 copay후 다른 binary File을 (만약 파일이 없다면)Create하고 paste하는 작업이였는데 
+한가지 궁금한 점이 있었다.
+
+바로 해당 코드 readCnt = fread(...) (24번째줄)에서 왜 fread가 sizeof(buf)값보다 적은 값을 return 하는지였다.
+
+처음에는 내가 코드를 잘못짠게 아닐까, 읽기로 불러운 src.bin파일에 아무런 내용이 없어서 그런게 아닐까 싶었다.
+그러다가 책에 있는 fread()함수의 구조를 다시 확인하였는데 
+
+size_t fread(저장할곳, 크기, 불러올 데이터의 개수, 불러들일 매채)
+        -> 성공 시 '불러올 데이터의 개수'를, 실패 시 앞의 개수보다 작은 값을 반환
+
+이였는데 내가 놓친 점은 반환의 의미였다. '성공'과 '실패'라는 단어를 사용하니까 fread가 처음부터 '불러울 데이터의 개수'보다 적은
+값을 return하는 것이 잘못된 작동인줄 알았고
+
+또 '불러올 데이터의 개수'를 잘못 이해했는데 예를 들어서
+'100'이라는 binary데이터를 fread를 통해 불러들일때 '불러올 데이터의 개수'가 10이라면
+"'100'이라는 binary데이터를 10개 복사해줘!" 즉 복사의 의미로 받아들였는데 불러올 데이터의 개수는
+그런것이 아니라 '크기'만큼 binary데이터를 나누었을 때 '불러올 데이터의 개수'만큼만 쪼개진 값을 받는다는 의미였다 즉
+
+예를 들어 "'100'이라는 '불러들일 매체'가 있을때 이 데이터를 '크기' 4로 쪼개고 '불러올 데이터 개수'를 20으로 하고 '저장할 곳'에 넣어줘!"
+라면 100/4 = 25이기에 쪼개져 나온 데이터는 총 4개이기에 '불러올 데이터 개수'만큼 불러올 수 없다 그래서 '실패'의 의미였던 20미만의 value를 return한 것이다.
+
+앞으로 표준 함수의 대한 내용이 나올 때 '왜 이 값을 넣고, 반환하는지'꼼꼼히 따져봐야겠다. (물론 많이 사용해보는것도 중요하다는 것을 알았다.)
+
+#include <stdio.h>
+
+int main(void){
+    FILE * src = fopen("C:\\Microsoft VS Code\\code_data\\윤성우_열혈_C\\Chaptor24\\binaryFile\\src.bin", "rb");
+    FILE * des = fopen("C:\\Microsoft VS Code\\code_data\\윤성우_열혈_C\\Chaptor24\\binaryFile\\dst.bin", "wb");
+    char buf[20];
+    int readCnt;
+
+    if(src==NULL || des == NULL){
+        puts("파일오픈 실패!");
+        return -1;
+    }
+
+    while(1){
+        readCnt = fread((void*)buf, 1, sizeof(buf), src); // 읽는것에 실패함, 왜? -> src의 파일을 읽어서 나오는 배열의 길이가 buf의 길이만큼 길지 않으니까
+        printf("이거다 : %d / %d\n", readCnt, sizeof(buf));
+
+        if(readCnt<sizeof(buf)){
+            if(feof(src) != 0){
+                fwrite((void*)buf, 1, readCnt, des);
+                puts("파일복사 완료!");
+                break;
+            }else{
+                puts("파일복사 실패!");
+            }
+            break;
+        }
+        fwrite((void*)buf, 1, sizeof(buf), des);
+    }
+
+    fclose(src);
+    fclose(des);
+    return 0;
+}
