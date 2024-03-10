@@ -1,0 +1,12 @@
+#include <stdio.h>
+#include <string.h>
+
+int main(void){
+    char str1[50], str2[50];
+    strcpy(str2, gets(str1));
+    
+    puts("하이요!");
+    puts(str1);
+    puts(str2);
+    return 0;
+}
